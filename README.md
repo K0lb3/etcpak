@@ -41,10 +41,66 @@ img_data = img.convert("RGBA").tobytes()
 compressed = etcpak.compress_to_dxt5(img_data, img.width, img.height)
 ```
 
+__composite image for format comparission__
+```python
+import os
+import etcpak
+import texture2ddecoder
+from PIL import Image
+
+FORMATS = [
+    ("DXT1", etcpak.compress_to_dxt1, texture2ddecoder.decode_bc1),
+    ("DXT1 Dither", etcpak.compress_to_dxt1_dither, texture2ddecoder.decode_bc1),
+    ("DXT5", etcpak.compress_to_dxt5, texture2ddecoder.decode_bc3),
+    ("ETC1", etcpak.compress_to_etc1, texture2ddecoder.decode_etc1),
+    ("ETC1 Dither", etcpak.compress_to_etc1_dither, texture2ddecoder.decode_etc1),
+    ("ETC2 RGB", etcpak.compress_to_etc2_rgb, texture2ddecoder.decode_etc2),
+    ("ETC2 RGBA", etcpak.compress_to_etc2_rgba, texture2ddecoder.decode_etc2a8)
+]
+
+p = "S:\\Pictures"
+for fp in os.listdir(p):
+    if not fp[-4:] in [".png", ".jpg", ".bmp", "jpeg"]:
+        continue
+    # load image and adjust format and size
+    print(fp)
+    img = Image.open(os.path.join(p, fp)).convert("RGBA")
+    img = img.crop((0,0,img.width-img.width%4, img.height-img.height%4))
+    
+    # create composite image
+    comp = Image.new("RGBA", (img.width*8, img.height))
+    comp.paste(img, (0, 0))
+    print(img.width * img.height * 4)
+
+    # iterate over all formats
+    for i, (name, enc, dec) in enumerate(FORMATS):
+        print(name)
+        # make sure that the channel order is correct for the compression
+        if name[:3] == "DXT":
+            raw = img.tobytes()
+        elif name[:3] == "ETC":
+            r,g,b,a = img.split()
+            raw = Image.merge('RGBA', (b,g,r,a)).tobytes()
+        
+        # compress
+        data = enc(raw, img.width, img.height)
+
+        # decompress
+        dimg = Image.frombytes("RGBA", img.size, dec(data, img.width, img.height), "raw", "BGRA")
+
+        # add to composite image
+        comp.paste(dimg, (img.width*(i+1), 0))
+
+    # save composite image
+    comp.save(os.path.splitext(fp)[0]+".png")
+```
+
 ## Functions
 
 * all functions accept only arguments, no keywords
-* the given data has to be RGBA for the RGB function as well
+* the given data has to be RGBA for the RGB functions as well
+* all DXT compressions require data in the RGBA format
+* all ETC compressions require data in the BGRA format  
 
 ### compress_to_dxt1
 

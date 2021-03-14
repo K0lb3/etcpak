@@ -86,9 +86,14 @@ static PyObject *compress(PyObject *self, PyObject *args, uint8_t pixel_per_byte
     const uint32_t *data;
     uint64_t data_size;
     uint32_t width, height;
-
     if (!PyArg_ParseTuple(args, "y#ii", &data, &data_size, &width, &height))
         return NULL;
+
+    if ((width % 4 != 0) || (height % 4 != 0)){
+        PyErr_SetString(PyExc_ValueError, "width or height not multiple of 4");
+        assert(PyErr_Occurred());
+        return NULL;
+    }
 
     // reserve return data
     uint64_t buf_size = width * height / pixel_per_byte;
