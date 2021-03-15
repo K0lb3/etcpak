@@ -1,5 +1,6 @@
 from setuptools import setup, Extension, find_packages
 import glob
+import platform
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -35,7 +36,9 @@ setup(
             ],
             language="c++",
             include_dirs=["src/etcpak"],
-            extra_compile_args=["-std=c++11"],
+            extra_compile_args=["-std=c++11"] + (
+                ["-Wno-c++11-narrowing"] if platform.system() == "Darwin" else []
+            ),
         )
     ],
 )
