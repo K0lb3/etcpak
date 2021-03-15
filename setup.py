@@ -1,5 +1,5 @@
 from setuptools import setup, Extension, find_packages
-import os
+import glob
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -8,7 +8,7 @@ setup(
     name="etcpak",
     description="python wrapper for etcpak",
     author="K0lb3",
-    version="0.9.2",
+    version="0.9.3",
     keywords=["etc", "dxt", "texture", "python-c"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
@@ -30,14 +30,11 @@ setup(
         Extension(
             "etcpak",
             [
-                "src/pylink.cpp",
-                "src/etcpak/ProcessDxtc.cpp",
-                "src/etcpak/ProcessRGB.cpp",
-                "src/etcpak/Tables.cpp",
-                "src/etcpak/Dither.cpp"
+                *glob.glob("src/etcpak/*.cpp"),
+                "src/pylink.cpp"
             ],
             language="c++",
-            include_dirs=["src/etcpak","src/etcpak/libpng","src/etcpak/zlib","src/etcpak/lz4"],
+            include_dirs=["src/etcpak"],
             extra_compile_args=["-std=c++11"],
         )
     ],

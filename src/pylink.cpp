@@ -111,6 +111,52 @@ static PyObject *compress(PyObject *self, PyObject *args, uint8_t pixel_per_byte
     return res;
 }
 
+
+#include "BlockData.hpp"
+
+static PyObject *decode(PyObject *self, PyObject *args, uint32_t* (*func)(uint64_t* src, uint32_t width, uint32_t height));
+
+static PyObject *decode_dxt1(PyObject *self, PyObject *args){
+    return decode(self, args, BlockData::PubDecodeDxt1);
+}
+
+static PyObject *decode_dxt5(PyObject *self, PyObject *args){
+    return decode(self, args, BlockData::PubDecodeDxt5);
+}
+
+static PyObject *decode_etc_rgb(PyObject *self, PyObject *args){
+    return decode(self, args, BlockData::PubDecodeETCRGB);
+}
+
+static PyObject *decode_etc_rgba(PyObject *self, PyObject *args){
+    return decode(self, args, BlockData::PubDecodeETCRGBA);
+}
+
+static PyObject *decode(PyObject *self, PyObject *args, uint32_t* (*func)(uint64_t* src, uint32_t width, uint32_t height))
+{
+    // define vars
+    uint64_t *data;
+    uint64_t data_size;
+    uint32_t width, height;
+    if (!PyArg_ParseTuple(args, "y#ii", &data, &data_size, &width, &height))
+        return NULL;
+
+    if ((width % 4 != 0) || (height % 4 != 0)){
+        PyErr_SetString(PyExc_ValueError, "width or height not multiple of 4");
+        assert(PyErr_Occurred());
+        return NULL;
+    }
+
+    // decode
+    uint32_t* dst = func(data, width, height);
+
+    // return
+    PyObject *res = Py_BuildValue("y#", dst, width*height*4);
+    free(dst);
+    return res;
+}
+
+
 /*
  *************************************************
  * 
@@ -236,6 +282,58 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
+:rtype: bytes"
+},
+    {"decode_dxt1",
+     (PyCFunction)decode_dxt1,
+     METH_VARARGS,
+     "decodes DXT1 to RGBA\
+:param data: RGBA data of the image\
+:type data: bytes\
+:param width: width of the image\
+:type width: int\
+:param height: height of the image\
+:type height: int\
+:returns: decoded data\
+:rtype: bytes"
+},
+    {"decode_dxt5",
+     (PyCFunction)decode_dxt5,
+     METH_VARARGS,
+     "decodes DXT5 to RGBA\
+:param data: RGBA data of the image\
+:type data: bytes\
+:param width: width of the image\
+:type width: int\
+:param height: height of the image\
+:type height: int\
+:returns: decoded data\
+:rtype: bytes"
+},
+    {"decode_etc_rgb",
+     (PyCFunction)decode_etc_rgb,
+     METH_VARARGS,
+     "decodes ETC1/2 RGB to RGBA\
+:param data: RGBA data of the image\
+:type data: bytes\
+:param width: width of the image\
+:type width: int\
+:param height: height of the image\
+:type height: int\
+:returns: decoded data\
+:rtype: bytes"
+},
+    {"decode_etc_rgba",
+     (PyCFunction)decode_etc_rgba,
+     METH_VARARGS,
+     "decodes ETC1/2 RGBA to RGBA\
+:param data: RGBA data of the image\
+:type data: bytes\
+:param width: width of the image\
+:type width: int\
+:param height: height of the image\
+:type height: int\
+:returns: decoded data\
 :rtype: bytes"
 },
     {NULL,
