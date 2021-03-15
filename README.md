@@ -5,7 +5,7 @@
 [![MIT](https://img.shields.io/pypi/l/etcpak.svg)](https://github.com/K0lb3/etcpak/blob/master/LICENSE)
 [![Build Status](https://github.com/K0lb3/etcpak/workflows/CI/badge.svg?branch=master)](https://github.com/K0lb3/etcpak/actions?query=workflow%3A%22CI%22)
 
-A python wrapper for [etcpak](https://github.com/wolfpld/etcpak)
+A python wrapper for [wolfpld/etcpak](https://github.com/wolfpld/etcpak)
 
 Some changes were made to the original code to make it cross-platform compatible.
 
