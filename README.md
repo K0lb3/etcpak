@@ -105,7 +105,7 @@ for fp in os.listdir(p):
 ### compress_to_dxt1
 
 *Compresses RGBA to DXT1*
-
+```
 :param data: RGBA data of the image
 :type data: bytes
 :param width: width of the image
@@ -114,7 +114,7 @@ for fp in os.listdir(p):
 :type height: int
 :returns: compressed data
 :rtype: bytes"
-
+```
 
 ### compress_to_dxt1_dither
 
