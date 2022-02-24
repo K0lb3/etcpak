@@ -24,6 +24,12 @@
 #  else
 #    include <x86intrin.h>
 #  endif
+#elif defined(__APPLE__)
+// Mac OS X / Darwin features
+#  include <libkern/OSByteOrder.h>
+//#  define bswap_16(x) OSSwapInt16(x)
+#  define _bswap(x) OSSwapInt32(x)
+#  define _bswap64(x) OSSwapInt64(x)
 #else
 #  ifndef _MSC_VER
 #    include <byteswap.h>
