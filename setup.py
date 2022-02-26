@@ -9,7 +9,7 @@ setup(
     name="etcpak",
     description="python wrapper for etcpak",
     author="K0lb3",
-    version="0.9.4",
+    version="0.9.5",
     keywords=["etc", "dxt", "texture", "python-c"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
@@ -37,7 +37,7 @@ setup(
             language="c++",
             include_dirs=["src/etcpak"],
             extra_compile_args=["-std=c++11"] + (
-                ["-Wno-c++11-narrowing"] if platform.system() == "Darwin" else []
+                ["-Wno-c++11-narrowing","-Wc++11-narrowing"] if platform.system() == "Darwin" else []
             ),
         )
     ],
