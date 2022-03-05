@@ -43,9 +43,12 @@ jobs:
           
       # Install wheels manually while waiting for them to be added to pypi
       - name: Install numpy and scipy wheels
+        # pip install https doesn't seem to work
         run: |
-          pip install https://download.lfd.uci.edu/pythonlibs/x6hvwk7i/numpy-1.21.5+vanilla-cp310-cp310-win32.whl
-          pip install https://download.lfd.uci.edu/pythonlibs/x6hvwk7i/scipy-1.7.3-cp310-cp310-win32.whl
+          Invoke-WebRequest -Uri https://download.lfd.uci.edu/pythonlibs/x6hvwk7i/numpy-1.21.5+vanilla-cp310-cp310-win32.whl -OutFile numpy-1.21.5+vanilla-cp310-cp310-win32.whl
+          pip install numpy-1.21.5+vanilla-cp310-cp310-win32.whl
+          Invoke-WebRequest -Uri https://download.lfd.uci.edu/pythonlibs/x6hvwk7i/scipy-1.7.3-cp310-cp310-win32.whl -OutFile scipy-1.7.3-cp310-cp310-win32.whl
+          pip install scipy-1.7.3-cp310-cp310-win32.whl
         if: matrix.os == 'windows-latest' && matrix.python-version == '3.10' && matrix.architecture == 'x86'
       
       # Installs the dependencies, add yours here
