@@ -36,7 +36,7 @@ setup(
             ],
             language="c++",
             include_dirs=["src/etcpak"],
-            extra_compile_args=["-std=c++11"] + (
+            extra_compile_args=["-std=gnu++11"] + (
                 ["-Wno-c++11-narrowing","-Wc++11-narrowing"] if platform.system() == "Darwin" else []
             ),
         )
