@@ -9,7 +9,7 @@ setup(
     name="etcpak",
     description="python wrapper for etcpak",
     author="K0lb3",
-    version="0.9.5",
+    version="0.9.6",
     keywords=["etc", "dxt", "texture", "python-c"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
