@@ -27,6 +27,9 @@
 //#  define bswap_16(x) OSSwapInt16(x)
 #  define _bswap(x) OSSwapInt32(x)
 #  define _bswap64(x) OSSwapInt64(x)
+#elif defined(__MINGW32__)
+#    include <intrin.h>
+#    include <Windows.h>
 #else
 #  ifndef _MSC_VER
 #    include <byteswap.h>
