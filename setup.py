@@ -1,15 +1,16 @@
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, Extension
 import glob
-import platform
+
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
 
 setup(
     name="etcpak",
     description="python wrapper for etcpak",
     author="K0lb3",
-    version="0.9.7",
+    version="0.9.8",
     keywords=["etc", "dxt", "texture", "python-c"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
@@ -21,6 +22,8 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Multimedia :: Graphics",
     ],
     url="https://github.com/K0lb3/etcpak",
@@ -30,15 +33,10 @@ setup(
     ext_modules=[
         Extension(
             "etcpak",
-            [
-                *glob.glob("src/etcpak/*.cpp"),
-                "src/pylink.cpp"
-            ],
+            [*glob.glob("src/etcpak/*.cpp"), "src/pylink.cpp"],
             language="c++",
             include_dirs=["src/etcpak"],
-            extra_compile_args=["-std=gnu++11"] + (
-                ["-Wno-c++11-narrowing","-Wc++11-narrowing"] if platform.system() == "Darwin" else []
-            ),
+            extra_compile_args=["-std=gnu++11"],
         )
     ],
 )

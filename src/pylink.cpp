@@ -4,83 +4,111 @@
 
 /*
  *************************************************
- * 
+ *
  * general decoder function headers
- * 
+ *
  ************************************************
-*/
+ */
 #include "ProcessDxtc.hpp"
 #include "ProcessRGB.hpp"
 
-static PyObject *compress(PyObject *self, PyObject *args, uint8_t pixel_per_byte,
-    void (*func)(const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width));
+template <bool useHeuristics>
+void CompressEtc2Alpha_Helper(const uint32_t *src, uint64_t *dst, uint32_t blocks, size_t width)
+{
+    return CompressEtc2Alpha(src, dst, blocks, width, useHeuristics);
+}
 
-static PyObject *compress_to_dxt1(PyObject *self, PyObject *args){
+template <bool useHeuristics>
+void CompressEtc2Rgb_Helper(const uint32_t *src, uint64_t *dst, uint32_t blocks, size_t width)
+{
+    return CompressEtc2Rgb(src, dst, blocks, width, useHeuristics);
+}
+
+template <bool useHeuristics>
+void CompressEtc2Rgba_Helper(const uint32_t *src, uint64_t *dst, uint32_t blocks, size_t width)
+{
+    return CompressEtc2Rgba(src, dst, blocks, width, useHeuristics);
+}
+
+static PyObject *compress(PyObject *self, PyObject *args, uint8_t pixel_per_byte,
+                          void (*func)(const uint32_t *src, uint64_t *dst, uint32_t blocks, size_t width));
+
+static bool use_heuristics = false;
+
+static PyObject *compress_to_dxt1(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 8 bits w/o alpha
-    // 8 bits per block / 16 pixel per block = 1/2 bytes per pixel 
+    // 8 bits per block / 16 pixel per block = 1/2 bytes per pixel
     return compress(self, args, 2, CompressDxt1);
 }
 
-static PyObject *compress_to_dxt1_dither(PyObject *self, PyObject *args){
+static PyObject *compress_to_dxt1_dither(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 8 bits w/o alpha
-    // 8 bits per block / 16 pixel per block = 1/2 bytes per pixel 
+    // 8 bits per block / 16 pixel per block = 1/2 bytes per pixel
     return compress(self, args, 2, CompressDxt1Dither);
 }
 
-static PyObject *compress_to_dxt5(PyObject *self, PyObject *args){
+static PyObject *compress_to_dxt5(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 16 bits w/ alpha
     // 16 bits per block / 16 pixel per block = 1 byte per pixel
     return compress(self, args, 1, CompressDxt5);
 }
 
-
-static PyObject *compress_to_etc1_alpha(PyObject *self, PyObject *args){
+static PyObject *compress_to_etc1_alpha(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 16 bits w/ alpha
     // 16 bits per block / 16 pixel per block = 1 byte per pixel
     return compress(self, args, 1, CompressEtc1Alpha);
 }
 
-static PyObject *compress_to_etc2_alpha(PyObject *self, PyObject *args){
+static PyObject *compress_to_etc2_alpha(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 16 bits w/ alpha
     // 16 bits per block / 16 pixel per block = 1 byte per pixel
-    return compress(self, args, 1, CompressEtc2Alpha);
+    return compress(self, args, 1, use_heuristics ? CompressEtc2Alpha_Helper<true> : CompressEtc2Alpha_Helper<false>);
 }
 
-static PyObject *compress_to_etc1_rgb(PyObject *self, PyObject *args){
+static PyObject *compress_to_etc1_rgb(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 8 bits w/ alpha
     // 8 bits per block / 16 pixel per block = 1/2 byte per pixel
     return compress(self, args, 2, CompressEtc1Rgb);
 }
 
-static PyObject *compress_to_etc1_rgb_dither(PyObject *self, PyObject *args){
+static PyObject *compress_to_etc1_rgb_dither(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 8 bits w/ alpha
     // 8 bits per block / 16 pixel per block = 1/2 byte per pixel
     return compress(self, args, 2, CompressEtc1RgbDither);
 }
 
-static PyObject *compress_to_etc2_rgb(PyObject *self, PyObject *args){
+static PyObject *compress_to_etc2_rgb(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 16 bits w/ alpha
     // 16 bits per block / 16 pixel per block = 1 byte per pixel
-    return compress(self, args, 2, CompressEtc2Rgb);
+    return compress(self, args, 2, use_heuristics ? CompressEtc2Rgb_Helper<true> : CompressEtc2Rgb_Helper<false>);
 }
 
-static PyObject *compress_to_etc2_rgba(PyObject *self, PyObject *args){
+static PyObject *compress_to_etc2_rgba(PyObject *self, PyObject *args)
+{
     // 4x4 block takes up 64 bits w/ alpha
     // after compression 16 bits w/ alpha
     // 16 bits per block / 16 pixel per block = 1 byte per pixel
-    return compress(self, args, 1, CompressEtc2Rgba);
+    return compress(self, args, 1, use_heuristics ? CompressEtc2Rgba_Helper<true> : CompressEtc2Rgba_Helper<false>);
 }
 
 static PyObject *compress(PyObject *self, PyObject *args, uint8_t pixel_per_byte,
-    void (*func)(const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width))
+                          void (*func)(const uint32_t *src, uint64_t *dst, uint32_t blocks, size_t width))
 {
     // define vars
     const uint32_t *data;
@@ -89,7 +117,8 @@ static PyObject *compress(PyObject *self, PyObject *args, uint8_t pixel_per_byte
     if (!PyArg_ParseTuple(args, "y#ii", &data, &data_size, &width, &height))
         return NULL;
 
-    if ((width % 4 != 0) || (height % 4 != 0)){
+    if ((width % 4 != 0) || (height % 4 != 0))
+    {
         PyErr_SetString(PyExc_ValueError, "width or height not multiple of 4");
         assert(PyErr_Occurred());
         return NULL;
@@ -111,28 +140,31 @@ static PyObject *compress(PyObject *self, PyObject *args, uint8_t pixel_per_byte
     return res;
 }
 
-
 #include "BlockData.hpp"
 
-static PyObject *decode(PyObject *self, PyObject *args, uint32_t* (*func)(uint64_t* src, uint32_t width, uint32_t height));
+static PyObject *decode(PyObject *self, PyObject *args, uint32_t *(*func)(uint64_t *src, uint32_t width, uint32_t height));
 
-static PyObject *decode_dxt1(PyObject *self, PyObject *args){
+static PyObject *decode_dxt1(PyObject *self, PyObject *args)
+{
     return decode(self, args, BlockData::PubDecodeDxt1);
 }
 
-static PyObject *decode_dxt5(PyObject *self, PyObject *args){
+static PyObject *decode_dxt5(PyObject *self, PyObject *args)
+{
     return decode(self, args, BlockData::PubDecodeDxt5);
 }
 
-static PyObject *decode_etc_rgb(PyObject *self, PyObject *args){
+static PyObject *decode_etc_rgb(PyObject *self, PyObject *args)
+{
     return decode(self, args, BlockData::PubDecodeETCRGB);
 }
 
-static PyObject *decode_etc_rgba(PyObject *self, PyObject *args){
+static PyObject *decode_etc_rgba(PyObject *self, PyObject *args)
+{
     return decode(self, args, BlockData::PubDecodeETCRGBA);
 }
 
-static PyObject *decode(PyObject *self, PyObject *args, uint32_t* (*func)(uint64_t* src, uint32_t width, uint32_t height))
+static PyObject *decode(PyObject *self, PyObject *args, uint32_t *(*func)(uint64_t *src, uint32_t width, uint32_t height))
 {
     // define vars
     uint64_t *data;
@@ -141,29 +173,43 @@ static PyObject *decode(PyObject *self, PyObject *args, uint32_t* (*func)(uint64
     if (!PyArg_ParseTuple(args, "y#ii", &data, &data_size, &width, &height))
         return NULL;
 
-    if ((width % 4 != 0) || (height % 4 != 0)){
+    if ((width % 4 != 0) || (height % 4 != 0))
+    {
         PyErr_SetString(PyExc_ValueError, "width or height not multiple of 4");
         assert(PyErr_Occurred());
         return NULL;
     }
 
     // decode
-    uint32_t* dst = func(data, width, height);
+    uint32_t *dst = func(data, width, height);
 
     // return
-    PyObject *res = Py_BuildValue("y#", dst, width*height*4);
+    PyObject *res = Py_BuildValue("y#", dst, width * height * 4);
     free(dst);
     return res;
 }
 
+static PyObject *set_heuristics(PyObject *self, PyObject *args)
+{
+    int use_heuristics_;
+    if (!PyArg_ParseTuple(args, "i", &use_heuristics_))
+        return NULL;
 
+    use_heuristics = use_heuristics_ != 0;
+    Py_RETURN_NONE;
+}
+
+static PyObject *get_heuristics(PyObject *self, PyObject *args)
+{
+    return Py_BuildValue("i", use_heuristics);
+}
 /*
  *************************************************
- * 
+ *
  * python connection
- * 
+ *
  ************************************************
-*/
+ */
 
 // Exported methods are collected in a table
 static struct PyMethodDef method_table[] = {
@@ -178,8 +224,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_dxt1_dither",
      (PyCFunction)compress_to_dxt1_dither,
      METH_VARARGS,
@@ -191,8 +236,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_dxt5",
      (PyCFunction)compress_to_dxt5,
      METH_VARARGS,
@@ -204,8 +248,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_etc1",
      (PyCFunction)compress_to_etc1_rgb,
      METH_VARARGS,
@@ -217,8 +260,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_etc1_dither",
      (PyCFunction)compress_to_etc1_rgb_dither,
      METH_VARARGS,
@@ -230,8 +272,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_etc1_alpha",
      (PyCFunction)compress_to_etc1_alpha,
      METH_VARARGS,
@@ -243,8 +284,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_etc2_rgb",
      (PyCFunction)compress_to_etc2_rgb,
      METH_VARARGS,
@@ -256,8 +296,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_etc2_rgba",
      (PyCFunction)compress_to_etc2_rgba,
      METH_VARARGS,
@@ -269,8 +308,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"compress_to_etc2_alpha",
      (PyCFunction)compress_to_etc2_alpha,
      METH_VARARGS,
@@ -282,8 +320,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: compressed data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"decode_dxt1",
      (PyCFunction)decode_dxt1,
      METH_VARARGS,
@@ -295,8 +332,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: decoded data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"decode_dxt5",
      (PyCFunction)decode_dxt5,
      METH_VARARGS,
@@ -308,8 +344,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: decoded data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"decode_etc_rgb",
      (PyCFunction)decode_etc_rgb,
      METH_VARARGS,
@@ -321,8 +356,7 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: decoded data\
-:rtype: bytes"
-},
+:rtype: bytes"},
     {"decode_etc_rgba",
      (PyCFunction)decode_etc_rgba,
      METH_VARARGS,
@@ -334,8 +368,15 @@ static struct PyMethodDef method_table[] = {
 :param height: height of the image\
 :type height: int\
 :returns: decoded data\
-:rtype: bytes"
-},
+:rtype: bytes"},
+    {"set_use_heuristics",
+     (PyCFunction)set_heuristics,
+     METH_VARARGS,
+     ""},
+    {"get_use_heuristics",
+     (PyCFunction)get_heuristics,
+     METH_VARARGS,
+     ""},
     {NULL,
      NULL,
      0,
