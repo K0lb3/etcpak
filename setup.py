@@ -1,9 +1,10 @@
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, Extension
 import glob
-import platform
+
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
 
 setup(
     name="etcpak",
@@ -30,15 +31,10 @@ setup(
     ext_modules=[
         Extension(
             "etcpak",
-            [
-                *glob.glob("src/etcpak/*.cpp"),
-                "src/pylink.cpp"
-            ],
+            [*glob.glob("src/etcpak/*.cpp"), "src/pylink.cpp"],
             language="c++",
             include_dirs=["src/etcpak"],
-            extra_compile_args=["-std=gnu++11"] + (
-                ["-Wno-c++11-narrowing","-Wc++11-narrowing"] if platform.system() == "Darwin" else []
-            ),
+            extra_compile_args=["-std=gnu++11"],
         )
     ],
 )

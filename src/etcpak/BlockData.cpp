@@ -15,7 +15,7 @@
 #  include <arm_neon.h>
 #endif
 
-#ifdef __SSE4_1__
+#if defined __SSE4_1__ || defined __AVX2__ || defined _MSC_VER
 #  ifdef _MSC_VER
 #    include <intrin.h>
 #    include <Windows.h>
@@ -53,7 +53,7 @@
 #endif
 #endif
 
-using namespace std; 
+using namespace std;
 
 static uint8_t table59T58H[8] = { 3,6,11,16,23,32,41,64 };
 
@@ -195,12 +195,14 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
     uint32_t cnt = m_size.x * m_size.y / 16;
+    // DBGPRINT( cnt << " blocks" );
 
     int levels = 1;
 
     if( mipmap )
     {
         levels = NumberOfMipLevels( size );
+        // DBGPRINT( "Number of mipmaps: " << levels );
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
@@ -243,7 +245,7 @@ BlockData::~BlockData()
     }
 }
 
-void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither )
+void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither, bool useHeuristics )
 {
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset;
 
@@ -251,7 +253,7 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     {
         if( m_type != Etc1 )
         {
-            CompressEtc2Alpha( src, dst, blocks, width );
+            CompressEtc2Alpha( src, dst, blocks, width, useHeuristics );
         }
         else
         {
@@ -273,7 +275,7 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             }
             break;
         case Etc2_RGB:
-            CompressEtc2Rgb( src, dst, blocks, width );
+            CompressEtc2Rgb( src, dst, blocks, width, useHeuristics );
             break;
         case Dxt1:
             if( dither )
@@ -292,14 +294,14 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     }
 }
 
-void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width )
+void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics )
 {
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
 
     switch( m_type )
     {
     case Etc2_RGBA:
-        CompressEtc2Rgba( src, dst, blocks, width );
+        CompressEtc2Rgba( src, dst, blocks, width, useHeuristics );
         break;
     case Dxt5:
         CompressDxt5( src, dst, blocks, width );
@@ -356,10 +358,10 @@ static etcpak_force_inline void DecodeT( uint64_t block, uint32_t* dst, uint32_t
     const auto c3b = clampu8( cb1 - table59T58H[codeword] );
 
     const uint32_t col_tab[4] = {
-        cr0 | ( cg0 << 8 ) | ( cb0 << 16 ) | 0xFF000000,
-        c2r | ( c2g << 8 ) | ( c2b << 16 ) | 0xFF000000,
-        cr1 | ( cg1 << 8 ) | ( cb1 << 16 ) | 0xFF000000,
-        c3r | ( c3g << 8 ) | ( c3b << 16 ) | 0xFF000000
+        uint32_t( cr0 | ( cg0 << 8 ) | ( cb0 << 16 ) | 0xFF000000 ),
+        uint32_t( c2r | ( c2g << 8 ) | ( c2b << 16 ) | 0xFF000000 ),
+        uint32_t( cr1 | ( cg1 << 8 ) | ( cb1 << 16 ) | 0xFF000000 ),
+        uint32_t( c3r | ( c3g << 8 ) | ( c3b << 16 ) | 0xFF000000 )
     };
 
     const uint32_t indexes = ( block >> 32 ) & 0xFFFFFFFF;
@@ -411,10 +413,10 @@ static etcpak_force_inline void DecodeTAlpha( uint64_t block, uint64_t alpha, ui
     const auto c3b = clampu8( cb1 - table59T58H[codeword] );
 
     const uint32_t col_tab[4] = {
-        cr0 | ( cg0 << 8 ) | ( cb0 << 16 ),
-        c2r | ( c2g << 8 ) | ( c2b << 16 ),
-        cr1 | ( cg1 << 8 ) | ( cb1 << 16 ),
-        c3r | ( c3g << 8 ) | ( c3b << 16 )
+        uint32_t( cr0 | ( cg0 << 8 ) | ( cb0 << 16 ) ),
+        uint32_t( c2r | ( c2g << 8 ) | ( c2b << 16 ) ),
+        uint32_t( cr1 | ( cg1 << 8 ) | ( cb1 << 16 ) ),
+        uint32_t( c3r | ( c3g << 8 ) | ( c3b << 16 ) )
     };
 
     const uint32_t indexes = ( block >> 32 ) & 0xFFFFFFFF;
@@ -458,10 +460,10 @@ static etcpak_force_inline void DecodeH( uint64_t block, uint32_t* dst, uint32_t
     const auto codeword = codeword_hi | codeword_lo;
 
     const uint32_t col_tab[] = {
-        clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 ),
-        clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 ),
-        clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 ),
-        clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 )
+        uint32_t( clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 ) ),
+        uint32_t( clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 ) ),
+        uint32_t( clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 ) ),
+        uint32_t( clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 ) )
     };
 
     for( uint8_t j = 0; j < 4; j++ )
@@ -505,10 +507,10 @@ static etcpak_force_inline void DecodeHAlpha( uint64_t block, uint64_t alpha, ui
     const auto tbl = g_alpha[(alpha >> 48) & 0xF];
 
     const uint32_t col_tab[] = {
-        clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 ),
-        clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 ),
-        clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 ),
-        clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 )
+        uint32_t( clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 ) ),
+        uint32_t( clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 ) ),
+        uint32_t( clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 ) ),
+        uint32_t( clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 ) )
     };
 
     for( uint8_t j = 0; j < 4; j++ )
@@ -1316,6 +1318,7 @@ uint8_t* BlockData::DecodeDxt5()
 
     return ret;
 }
+
 
 uint32_t* BlockData::PubDecodeDxt1(uint64_t* src, uint32_t width, uint32_t height)
 {
