@@ -48,7 +48,7 @@ jobs:
             ${{ matrix.cp }}-macosx_x86_64
             ${{ matrix.cp }}-macosx_arm64
             ${{ matrix.cp }}-macosx_universal2
-          CIBW_TEST_REQUIRES: pytest pillow imagehash texture2ddecoder
+          CIBW_TEST_REQUIRES: setuptools pytest pillow imagehash texture2ddecoder
           CIBW_TEST_COMMAND: pytest -v -s {package}/tests
           CIBW_TEST_SKIP: "*-macosx_arm64 *-macosx_universal2:arm64 *-win32 *_i686"
 
