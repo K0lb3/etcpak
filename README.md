@@ -6,8 +6,7 @@
 [![Build Status](https://github.com/K0lb3/etcpak/workflows/CI/badge.svg?branch=master)](https://github.com/K0lb3/etcpak/actions?query=workflow%3A%22CI%22)
 
 A python wrapper for [wolfpld/etcpak](https://github.com/wolfpld/etcpak)
-
-Some changes were made to the original code to make it cross-platform compatible.
+All relevant function  and class documentation was taken from [wolfpld/etcpak](https://github.com/wolfpld/etcpak).
 
 1. [Installation](https://github.com/K0lb3/etcpak#installation)
 2. [Example](https://github.com/K0lb3/etcpak#example)
@@ -38,7 +37,7 @@ img = Image.open(file_path)
 img_data = img.convert("RGBA").tobytes()
 
 # compress data
-compressed = etcpak.compress_to_dxt5(img_data, img.width, img.height)
+compressed = etcpak.compress_bc3(img_data, img.width, img.height)
 ```
 
 __composite image for format comparission__
@@ -49,13 +48,13 @@ import texture2ddecoder
 from PIL import Image
 
 FORMATS = [
-    ("DXT1", etcpak.compress_to_dxt1, texture2ddecoder.decode_bc1),
-    ("DXT1 Dither", etcpak.compress_to_dxt1_dither, texture2ddecoder.decode_bc1),
-    ("DXT5", etcpak.compress_to_dxt5, texture2ddecoder.decode_bc3),
-    ("ETC1", etcpak.compress_to_etc1, texture2ddecoder.decode_etc1),
-    ("ETC1 Dither", etcpak.compress_to_etc1_dither, texture2ddecoder.decode_etc1),
-    ("ETC2 RGB", etcpak.compress_to_etc2_rgb, texture2ddecoder.decode_etc2),
-    ("ETC2 RGBA", etcpak.compress_to_etc2_rgba, texture2ddecoder.decode_etc2a8)
+    ("DXT1", etcpak.compress_bc1, texture2ddecoder.decode_bc1),
+    ("DXT1 Dither", etcpak.compress_bc1_dither, texture2ddecoder.decode_bc1),
+    ("DXT5", etcpak.compress_bc3, texture2ddecoder.decode_bc3),
+    ("ETC1", etcpak.compress_etc1_rgb, texture2ddecoder.decode_etc1),
+    ("ETC1 Dither", etcpak.compress_etc1_rgb_dither, texture2ddecoder.decode_etc1),
+    ("ETC2 RGB", etcpak.compress_etc2_rgb, texture2ddecoder.decode_etc2),
+    ("ETC2 RGBA", etcpak.compress_etc2_rgba, texture2ddecoder.decode_etc2a8)
 ]
 
 p = "S:\\Pictures"
@@ -102,128 +101,4 @@ for fp in os.listdir(p):
 * **all __DXT__ compressions require data in the __RGBA__ format**
 * **all __ETC__ compressions require data in the __BGRA__ format**
 
-### compress_to_dxt1
-
-*Compresses RGBA to DXT1*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_dxt1_dither
-
-*Compresses RGBA to DXT1 Dither*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_dxt5
-
-*Compresses RGBA to DXT5*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_etc1
-
-*Compresses RGBA to ETC1 RGB*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_etc1_dither
-
-*Compresses RGBA to ETC1 Dither*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_etc1_alpha
-
-*Compresses A to ETC1 Alpha*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_etc2_rgb
-
-*Compresses RGBA to ETC2 RGB*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_etc2_rgba
-
-*Compresses RGBA to ETC2 RGBA*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
-
-### compress_to_etc2_alpha
-
-*Compresses RGBA to ETC2 Alpha*
-```
-:param data: RGBA data of the image
-:type data: bytes
-:param width: width of the image
-:type width: int
-:param height: height of the image
-:type height: int
-:returns: compressed data
-:rtype: bytes"
-```
+see [etcpak/__init__.pyi](./etcpak/__init__.pyi)

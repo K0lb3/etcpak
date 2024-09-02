@@ -1,0 +1,3 @@
+[submodule "etcpak"]
+	path = src/etcpak
+	url = https://github.com/wolfpld/etcpak.git
