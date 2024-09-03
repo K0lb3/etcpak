@@ -1,6 +1,6 @@
-import sys
 from setuptools import setup, Extension
-from typing import List
+from setuptools.command.build_ext import build_ext
+import os
 
 ETCPAK_SOURCES = [
     "bc7enc.cpp",
@@ -25,11 +25,39 @@ ETCPAK_SOURCES = [
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-SYSTEM_COMPILE_ARGS: List[str]
-if sys.platform == "win32":
-    SYSTEM_COMPILE_ARGS = ["/srd:c++20", "/Zc:strictStrings-"]
-else:
-    SYSTEM_COMPILE_ARGS = ["-std=c++20"]
+
+class CustomBuildExt(build_ext):
+    def build_extensions(self):
+        compiler_type = self.compiler.compiler_type
+
+        if compiler_type == "msvc":
+            # MSVC-specific compiler and linker flags
+            for ext in self.extensions:
+                ext.extra_compile_args.extend(
+                    [
+                        "/std:c++20",
+                        "/Zc:strictStrings-",
+                        "/DNOMINMAX",
+                        "/D__SSE4_1__",
+                        "/D__AVX2__",
+                        "/arch:AVX2",
+                        "/GL",
+                    ]
+                )
+                ext.extra_link_args = ["/LTCG:incremental"]
+        else:
+            # For other compilers (e.g., GCC or Clang)
+            cpu = os.uname().machine
+            if cpu in ("arm", "aarch64"):
+                native_arg = "-mcpu=native"
+            else:
+                native_arg = "-march=native"
+
+            for ext in self.extensions:
+                ext.extra_compile_args.extend(["-std=c++20", native_arg])
+
+        super().build_extensions()
+
 
 setup(
     name="etcpak",
@@ -71,8 +99,6 @@ setup(
                 "src/etcpak",
             ],
             extra_compile_args=[
-                *SYSTEM_COMPILE_ARGS,
-                "-DNOMINMAX",
                 "-DNDEBUG",
                 "-DNO_GZIP",
                 # Mac fix due to .c problem
@@ -80,4 +106,5 @@ setup(
             ],
         )
     ],
+    cmdclass={"build_ext": CustomBuildExt},
 )
