@@ -1,6 +1,5 @@
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
-import os
 
 ETCPAK_SOURCES = [
     "bc7enc.cpp",
@@ -29,7 +28,6 @@ with open("README.md", "r") as fh:
 class CustomBuildExt(build_ext):
     def build_extensions(self):
         compiler_type = self.compiler.compiler_type
-
         if compiler_type == "msvc":
             # MSVC-specific compiler and linker flags
             for ext in self.extensions:
@@ -38,18 +36,21 @@ class CustomBuildExt(build_ext):
                         "/std:c++20",
                         "/Zc:strictStrings-",
                         "/DNOMINMAX",
-                        "/D__SSE4_1__",
-                        "/D__AVX2__",
-                        "/arch:AVX2",
                         "/GL",
                     ]
                 )
+                if "-amd64" in self.plat_name:
+                    ext.extra_compile_args.extend(
+                        ["/D__SSE4_1__", "/D__AVX2__", "/arch:AVX2"]
+                    )
                 ext.extra_link_args = ["/LTCG:incremental"]
         else:
             # For other compilers (e.g., GCC or Clang)
-            cpu = os.uname().machine
-            if cpu in ("arm", "aarch64"):
-                native_arg = "-mcpu=native"
+            if "-arm" in self.plat_name or "-aarch64" in self.plat_name:
+                if "macosx" in self.plat_name:
+                    native_arg = "-mcpu=apple-m1"
+                else:
+                    native_arg = "-mcpu=native"
             else:
                 native_arg = "-march=native"
 
