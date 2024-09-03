@@ -21,11 +21,11 @@ void CompressEtc2(const uint32_t *src, uint64_t *dst, uint32_t blocks, size_t wi
 
 // generic compress function
 typedef void (*CompressFunc)(const uint32_t *src, uint64_t *dst, uint32_t blocks, size_t width);
-template <CompressFunc Func, uint8_t PIXEL_PER_BYTE>
+template <CompressFunc Func, uint8_t PIXEL_PER_BYTE, bool RGBA_TO_BGRA>
 static PyObject *compress(PyObject *self, PyObject *args)
 {
     // define vars
-    const uint32_t *data;
+    uint32_t *data;
     uint64_t data_size;
     uint32_t width, height;
     if (!PyArg_ParseTuple(args, "y#ii", &data, &data_size, &width, &height))
@@ -36,6 +36,16 @@ static PyObject *compress(PyObject *self, PyObject *args)
         PyErr_SetString(PyExc_ValueError, "width or height not multiple of 4");
         assert(PyErr_Occurred());
         return NULL;
+    }
+
+    // etc expects bgra instead of rgba, so we need to swap the bytes
+    if (RGBA_TO_BGRA)
+    {
+        for (uint64_t i = 0; i < width * height; i++)
+        {
+            uint32_t pixel = data[i];
+            data[i] = (pixel & 0xFF00FF00) | ((pixel & 0x00FF0000) >> 16) | ((pixel & 0x000000FF) << 16);
+        }
     }
 
     // reserve return data
@@ -61,26 +71,13 @@ static PyObject *compress_bc7(PyObject *self, PyObject *args)
     const uint32_t *data;
     uint64_t data_size;
     uint32_t width, height;
-    PyObject *params;
-    bool params_created = false;
+    PyObject *params = nullptr;
     if (!PyArg_ParseTuple(args, "y#ii|O", &data, &data_size, &width, &height, &params))
         return NULL;
 
     if ((width % 4 != 0) || (height % 4 != 0))
     {
         PyErr_SetString(PyExc_ValueError, "width or height not multiple of 4");
-        assert(PyErr_Occurred());
-        return NULL;
-    }
-
-    if (params == NULL)
-    {
-        params = PyBC7CompressBlockParamsType.tp_new(&PyBC7CompressBlockParamsType, NULL, NULL);
-        params_created = true;
-    }
-    else if (!PyObject_IsInstance(params, (PyObject *)&PyBC7CompressBlockParamsType))
-    {
-        PyErr_SetString(PyExc_ValueError, "params must be an instance of BC7CompressBlockParams");
         assert(PyErr_Occurred());
         return NULL;
     }
@@ -94,8 +91,23 @@ static PyObject *compress_bc7(PyObject *self, PyObject *args)
 
     // compress
     bc7enc_compress_block_init();
-    CompressBc7(data, buf, width * height / 16, width, &((PyBC7CompressBlockParams *)params)->params);
-
+    if (params == nullptr)
+    {
+        bc7enc_compress_block_params bc7params;
+        bc7enc_compress_block_params_init(&bc7params);
+        CompressBc7(data, buf, width * height / 16, width, &bc7params);
+    }
+    else
+    {
+        if (!PyObject_IsInstance(params, (PyObject *)&PyBC7CompressBlockParamsType))
+        {
+            PyErr_SetString(PyExc_ValueError, "params must be an instance of BC7CompressBlockParams");
+            free(buf);
+            assert(PyErr_Occurred());
+            return NULL;
+        }
+        CompressBc7(data, buf, width * height / 16, width, &((PyBC7CompressBlockParams *)params)->params);
+    }
     // return
     PyObject *res = Py_BuildValue("y#", buf, buf_size);
     free(buf);
@@ -156,23 +168,23 @@ static PyObject *decompress(PyObject *self, PyObject *args)
 // Exported methods are collected in a table
 static struct PyMethodDef method_table[] = {
     {"compress_bc1",
-     (PyCFunction)compress<CompressBc1, 2>,
+     (PyCFunction)compress<CompressBc1, 2, false>,
      METH_VARARGS,
      ""},
     {"compress_bc1_dither",
-     (PyCFunction)compress<CompressBc1Dither, 2>,
+     (PyCFunction)compress<CompressBc1Dither, 2, false>,
      METH_VARARGS,
      ""},
     {"compress_bc3",
-     (PyCFunction)compress<CompressBc3, 1>,
+     (PyCFunction)compress<CompressBc3, 1, false>,
      METH_VARARGS,
      ""},
     {"compress_bc4",
-     (PyCFunction)compress<CompressBc4, 2>,
+     (PyCFunction)compress<CompressBc4, 2, false>,
      METH_VARARGS,
      ""},
     {"compress_bc5",
-     (PyCFunction)compress<CompressBc5, 1>,
+     (PyCFunction)compress<CompressBc5, 1, false>,
      METH_VARARGS,
      ""},
     {"compress_bc7",
@@ -180,27 +192,27 @@ static struct PyMethodDef method_table[] = {
      METH_VARARGS,
      ""},
     {"compress_etc1_rgb",
-     (PyCFunction)compress<CompressEtc1Rgb, 2>,
+     (PyCFunction)compress<CompressEtc1Rgb, 2, true>,
      METH_VARARGS,
      ""},
     {"compress_etc1_rgb_dither",
-     (PyCFunction)compress<CompressEtc1RgbDither, 2>,
+     (PyCFunction)compress<CompressEtc1RgbDither, 2, true>,
      METH_VARARGS,
      ""},
     {"compress_etc2_rgb",
-     (PyCFunction)compress<CompressEtc2<CompressEtc2Rgb, true>, 2>,
+     (PyCFunction)compress<CompressEtc2<CompressEtc2Rgb, true>, 2, true>,
      METH_VARARGS,
      ""},
     {"compress_etc2_rgba",
-     (PyCFunction)compress<CompressEtc2<CompressEtc2Rgba, true>, 2>,
+     (PyCFunction)compress<CompressEtc2<CompressEtc2Rgba, true>, 1, true>,
      METH_VARARGS,
      ""},
     {"compress_eac_r",
-     (PyCFunction)compress<CompressEacR, 1>,
+     (PyCFunction)compress<CompressEacR, 1, true>,
      METH_VARARGS,
      ""},
     {"compress_eac_rg",
-     (PyCFunction)compress<CompressEacRg, 1>,
+     (PyCFunction)compress<CompressEacRg, 1, true>,
      METH_VARARGS,
      ""},
     {"decompress_etc1_rgb",
