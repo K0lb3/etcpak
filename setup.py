@@ -105,6 +105,7 @@ setup(
                 # Mac fix due to .c problem
                 "-DBCDEC_IMPLEMENTATION=1",
             ],
+            depends=["src/etcpak/bc7enc.h","src/etcpak/bcdec.h","src/etcpak/lz4/lz4.h"]
         )
     ],
     cmdclass={"build_ext": CustomBuildExt},
