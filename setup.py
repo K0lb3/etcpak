@@ -25,46 +25,79 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 
+def add_msvc_flags(ext: Extension, plat_name: str, enable_simd: bool):
+    ext.extra_compile_args.extend(
+        [
+            "/std:c++20",
+            "/Zc:strictStrings-",
+            "/DNOMINMAX",
+            "/GL",
+        ]
+    )
+    ext.extra_link_args = ["/LTCG:incremental"]
+    if enable_simd and "-amd64" in plat_name:
+        ext.extra_compile_args.extend(["/D__SSE4_1__", "/D__AVX2__", "/arch:AVX2"])
+
+
+def add_gcc_flags(ext: Extension, plat_name: str, enable_simd: bool):
+    ext.extra_compile_args.append("-std=c++20")
+    ext.extra_link_args = ["-flto"]
+    if enable_simd:
+        if "-arm" in plat_name or "-aarch64" in plat_name:
+            if "macosx" in plat_name:
+                native_arg = "-mcpu=apple-m1"
+            else:
+                native_arg = "-mcpu=native"
+        else:
+            native_arg = "-march=native"
+        ext.extra_compile_args.append(native_arg)
+
+
 class CustomBuildExt(build_ext):
     def build_extensions(self):
         compiler_type = self.compiler.compiler_type
-        if compiler_type == "msvc":
-            # MSVC-specific compiler and linker flags
-            for ext in self.extensions:
-                ext.extra_compile_args.extend(
-                    [
-                        "/std:c++20",
-                        "/Zc:strictStrings-",
-                        "/DNOMINMAX",
-                        "/GL",
-                    ]
-                )
-                if "-amd64" in self.plat_name:
-                    ext.extra_compile_args.extend(
-                        ["/D__SSE4_1__", "/D__AVX2__", "/arch:AVX2"]
-                    )
-                ext.extra_link_args = ["/LTCG:incremental"]
-        else:
-            # For other compilers (e.g., GCC or Clang)
-            if "-arm" in self.plat_name or "-aarch64" in self.plat_name:
-                if "macosx" in self.plat_name:
-                    native_arg = "-mcpu=apple-m1"
-                else:
-                    native_arg = "-mcpu=native"
+        for ext in self.extensions:
+            enable_simd = ext.name.endswith("_simd")
+            if compiler_type == "msvc":
+                add_msvc_flags(ext, self.plat_name, enable_simd)
             else:
-                native_arg = "-march=native"
-
-            for ext in self.extensions:
-                ext.extra_compile_args.extend(["-std=c++20", native_arg])
+                add_gcc_flags(ext, self.plat_name, enable_simd)
 
         super().build_extensions()
+
+
+def create_etcpak_extension(enable_simd: bool):
+    module_name = "_etcpak"
+    if enable_simd:
+        module_name += "_simd"
+    
+    return Extension(
+        f"etcpak.{module_name}",
+        [
+            "src/pylink.cpp",
+            "src/dummy.cpp",
+            *[f"src/etcpak/{src}" for src in ETCPAK_SOURCES],
+        ],
+        language="c++",
+        include_dirs=[
+            "src/etcpak",
+        ],
+        extra_compile_args=[
+            "-DNDEBUG",
+            "-DNO_GZIP",
+            # Mac fix due to .c problem
+            "-DBCDEC_IMPLEMENTATION=1",
+            f"-DMODULE_NAME=\"{module_name}\"",
+            f"-DINIT_FUNC_NAME=PyInit_{module_name}",
+        ],
+    )
 
 
 setup(
     name="etcpak",
     description="python wrapper for etcpak",
     author="K0lb3",
-    version="0.9.9",
+    version="0.9.10",
     packages=["etcpak"],
     package_data={"etcpak": ["__init__.py", "__init__.pyi"]},
     keywords=["etc", "dxt", "texture", "python-c"],
@@ -88,24 +121,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     ext_modules=[
-        Extension(
-            "etcpak._etcpak",
-            [
-                "src/pylink.cpp",
-                "src/dummy.cpp",
-                *[f"src/etcpak/{src}" for src in ETCPAK_SOURCES],
-            ],
-            language="c++",
-            include_dirs=[
-                "src/etcpak",
-            ],
-            extra_compile_args=[
-                "-DNDEBUG",
-                "-DNO_GZIP",
-                # Mac fix due to .c problem
-                "-DBCDEC_IMPLEMENTATION=1",
-            ],
-        )
+        create_etcpak_extension(False),
+        create_etcpak_extension(True),
     ],
     cmdclass={"build_ext": CustomBuildExt},
 )

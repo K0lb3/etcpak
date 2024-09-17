@@ -1,4 +1,7 @@
-from ._etcpak import *  # noqa: F403
+try:
+    from ._etcpak_simd import *  # noqa: F403
+except ImportError:
+    from ._etcpak import *
 
 # legacy mappings for backwards compatibility
 compress_to_dxt1 = compress_bc1  # noqa: F405

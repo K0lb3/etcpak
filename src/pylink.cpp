@@ -264,7 +264,7 @@ static struct PyMethodDef method_table[] = {
 // A struct contains the definition of a module
 static PyModuleDef etcpak_module = {
     PyModuleDef_HEAD_INIT,
-    "_etcpak", // Module name
+    MODULE_NAME, //"_etcpak", // Module name
     "a python wrapper for Perfare's etcpak",
     -1, // Optional size of the module state memory
     method_table,
@@ -283,7 +283,7 @@ static void add_type(PyObject *m, PyTypeObject *obj, const char *name)
 }
 
 // The module init function
-PyMODINIT_FUNC PyInit__etcpak(void)
+PyMODINIT_FUNC INIT_FUNC_NAME(void)
 {
     PyObject *m = PyModule_Create(&etcpak_module);
     if (m == NULL)
