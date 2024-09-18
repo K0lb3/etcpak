@@ -282,9 +282,20 @@ static void add_type(PyObject *m, PyTypeObject *obj, const char *name)
     PyModule_AddObject(m, name, (PyObject *)obj);
 }
 
+#if defined(CHECK_CPU_FEATURES) && !defined(__ARM_NEON)
+#include "check_cpufeatures.hpp"
+#endif
+
 // The module init function
 PyMODINIT_FUNC INIT_FUNC_NAME(void)
 {
+#if defined(CHECK_CPU_FEATURES) && !defined(__ARM_NEON)
+    if (!check_cpu_features())
+    {
+        PyErr_SetString(PyExc_ImportError, "CPU does not support required features");
+        return NULL;
+    }
+#endif
     PyObject *m = PyModule_Create(&etcpak_module);
     if (m == NULL)
         return NULL;

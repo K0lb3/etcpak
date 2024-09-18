@@ -1,3 +1,6 @@
 [submodule "etcpak"]
 	path = src/etcpak
 	url = https://github.com/wolfpld/etcpak.git
+[submodule "cpufeature"]
+	path = src/cpufeature
+	url = https://github.com/robbmcleod/cpufeature.git

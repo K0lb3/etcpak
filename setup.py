@@ -58,6 +58,11 @@ class CustomBuildExt(build_ext):
         compiler_type = self.compiler.compiler_type
         for ext in self.extensions:
             enable_simd = ext.name.endswith("_simd")
+            if enable_simd and not (
+                "-arm" in self.plat_name or "-aarch64" in self.plat_name
+            ):
+                # no need to check for SIMD on ARM
+                ext.extra_compile_args.append("-DCHECK_CPU_FEATURES")
             if compiler_type == "msvc":
                 add_msvc_flags(ext, self.plat_name, enable_simd)
             else:
@@ -70,24 +75,26 @@ def create_etcpak_extension(enable_simd: bool):
     module_name = "_etcpak"
     if enable_simd:
         module_name += "_simd"
-    
+
     return Extension(
         f"etcpak.{module_name}",
         [
             "src/pylink.cpp",
+            "src/check_cpufeatures.cpp",
             "src/dummy.cpp",
             *[f"src/etcpak/{src}" for src in ETCPAK_SOURCES],
         ],
         language="c++",
         include_dirs=[
             "src/etcpak",
+            "src/cpufeature/cpufeature",
         ],
         extra_compile_args=[
             "-DNDEBUG",
             "-DNO_GZIP",
             # Mac fix due to .c problem
             "-DBCDEC_IMPLEMENTATION=1",
-            f"-DMODULE_NAME=\"{module_name}\"",
+            f'-DMODULE_NAME="{module_name}"',
             f"-DINIT_FUNC_NAME=PyInit_{module_name}",
         ],
     )
@@ -97,7 +104,7 @@ setup(
     name="etcpak",
     description="python wrapper for etcpak",
     author="K0lb3",
-    version="0.9.10",
+    version="0.9.11",
     packages=["etcpak"],
     package_data={"etcpak": ["__init__.py", "__init__.pyi"]},
     keywords=["etc", "dxt", "texture", "python-c"],
@@ -114,8 +121,10 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Topic :: Multimedia :: Graphics",
     ],
+    requires=["cpufeature"],
     url="https://github.com/K0lb3/etcpak",
     download_url="https://github.com/K0lb3/etcpak/tarball/master",
     long_description=long_description,
