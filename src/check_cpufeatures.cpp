@@ -1,10 +1,16 @@
 // copied from: https://github.com/robbmcleod/cpufeature/blob/master/cpufeature/cpu_x86.c
+#include <stdint.h>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
 #if _WIN32
 #include "cpu_x86_windows.c"
 #elif defined(__GNUC__) || defined(__clang__)
 #include "cpu_x86_linux.c"
 #endif
+#endif
+
+#ifndef _XCR_XFEATURE_ENABLED_MASK
+// lazy fix, seems to be 0 on Windows and MacOS
+#define _XCR_XFEATURE_ENABLED_MASK 0
 #endif
 
 extern void cpuid(int32_t out[4], int32_t level, int32_t count);
