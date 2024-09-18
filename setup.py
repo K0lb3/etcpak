@@ -62,7 +62,9 @@ class CustomBuildExt(build_ext):
                 "-arm" in self.plat_name or "-aarch64" in self.plat_name
             ):
                 # no need to check for SIMD on ARM
+                ext.sources.append("src/check_cpufeatures.cpp")
                 ext.extra_compile_args.append("-DCHECK_CPU_FEATURES")
+            
             if compiler_type == "msvc":
                 add_msvc_flags(ext, self.plat_name, enable_simd)
             else:
@@ -80,7 +82,6 @@ def create_etcpak_extension(enable_simd: bool):
         f"etcpak.{module_name}",
         [
             "src/pylink.cpp",
-            "src/check_cpufeatures.cpp",
             "src/dummy.cpp",
             *[f"src/etcpak/{src}" for src in ETCPAK_SOURCES],
         ],
