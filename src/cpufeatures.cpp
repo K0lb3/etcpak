@@ -1,3 +1,4 @@
+#include <Python.h>
 // copied from: https://github.com/robbmcleod/cpufeature/blob/master/cpufeature/cpu_x86.c
 #include <stdint.h>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
@@ -40,15 +41,19 @@ bool detect_OS_AVX512(void)
     return (xcrFeatureMask & 0xe6) == 0xe6;
 }
 
-bool check_cpu_features()
+PyObject* check_cpufeatures(PyObject* self)
 {
+#ifdef __ARM_NEON
+    return Py_True;
+#endif
+
     int info[4]; // [EAX, EBX, ECX, EDX]
     cpuid(info, 0, 0);
     int nIds = info[0];
 
     if (nIds < 0x00000007)
     {
-        return false;
+        return Py_False;
     }
 
     cpuid(info, 0x80000000, 0);
@@ -57,30 +62,61 @@ bool check_cpu_features()
     cpuid(info, 0x00000001, 0);
 #ifdef __SSE4_1__
     if ((info[2] & ((int)1 << 19)) == 0)
-        return false;
+        return Py_False;
 #endif
 #ifdef __AVX__
     if (((info[2] & ((int)1 << 28)) == 0) || !detect_OS_AVX())
-        return false;
+        return Py_False;
 #endif
 
     cpuid(info, 0x00000007, 0);
 #ifdef __AVX2__
     if ((info[1] & ((int)1 << 5)) == 0)
-        return false;
+        return Py_False;
 #endif
 #ifdef __AVX512__
     if (!detect_OS_AVX512())
-        return false;
+        return Py_False;
 #endif
 #ifdef __AVX512BW__
     if ((info[1] & ((int)1 << 30)) == 0)
-        return false;
+        return Py_False;
 #endif
 #ifdef __AVX512VL__
     if ((info[1] & ((int)1 << 31)) == 0)
-        return false;
+        return Py_False;
 #endif
 
-    return true;
+    return Py_True;
+}
+
+// Exported methods are collected in a table
+static struct PyMethodDef method_table[] = {
+    {"check_cpufeatures",
+     (PyCFunction)check_cpufeatures,
+     METH_NOARGS,
+     ""},
+    {NULL,
+     NULL,
+     0,
+     NULL} // Sentinel value ending the table
+};
+
+// A struct contains the definition of a module
+static PyModuleDef cpufeatures_module = {
+    PyModuleDef_HEAD_INIT,
+    "_cpufeatures", //"_etcpak", // Module name
+    "",
+    -1, // Optional size of the module state memory
+    method_table,
+    NULL, // Optional slot definitions
+    NULL, // Optional traversal function
+    NULL, // Optional clear function
+    NULL  // Optional module deallocation function
+};
+
+// The module init function
+PyMODINIT_FUNC PyInit__cpufeatures(void)
+{
+    return PyModule_Create(&cpufeatures_module);
 }

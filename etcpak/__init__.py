@@ -1,6 +1,8 @@
-try:
+from ._cpufeatures import check_cpufeatures
+
+if check_cpufeatures():
     from ._etcpak_simd import *  # noqa: F403
-except ImportError:
+else:
     from ._etcpak import *
 
 # legacy mappings for backwards compatibility

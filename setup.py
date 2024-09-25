@@ -57,14 +57,7 @@ class CustomBuildExt(build_ext):
     def build_extensions(self):
         compiler_type = self.compiler.compiler_type
         for ext in self.extensions:
-            enable_simd = ext.name.endswith("_simd")
-            if enable_simd and not (
-                "-arm" in self.plat_name or "-aarch64" in self.plat_name
-            ):
-                # no need to check for SIMD on ARM
-                ext.sources.append("src/check_cpufeatures.cpp")
-                ext.extra_compile_args.append("-DCHECK_CPU_FEATURES")
-            
+            enable_simd = ext.name != "etcpak._etcpak"
             if compiler_type == "msvc":
                 add_msvc_flags(ext, self.plat_name, enable_simd)
             else:
@@ -88,7 +81,6 @@ def create_etcpak_extension(enable_simd: bool):
         language="c++",
         include_dirs=[
             "src/etcpak",
-            "src/cpufeature/cpufeature",
         ],
         extra_compile_args=[
             "-DNDEBUG",
@@ -105,9 +97,11 @@ setup(
     name="etcpak",
     description="python wrapper for etcpak",
     author="K0lb3",
-    version="0.9.11",
+    version="0.9.12",
     packages=["etcpak"],
-    package_data={"etcpak": ["__init__.py", "__init__.pyi"]},
+    package_data={
+        "etcpak": ["__init__.py", "__init__.pyi", "py.typed", "_cpufeatures.pyi"]
+    },
     keywords=["etc", "dxt", "texture", "python-c"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
@@ -125,7 +119,6 @@ setup(
         "Programming Language :: Python :: 3.13",
         "Topic :: Multimedia :: Graphics",
     ],
-    requires=["cpufeature"],
     url="https://github.com/K0lb3/etcpak",
     download_url="https://github.com/K0lb3/etcpak/tarball/master",
     long_description=long_description,
@@ -133,6 +126,16 @@ setup(
     ext_modules=[
         create_etcpak_extension(False),
         create_etcpak_extension(True),
+        Extension(
+            "etcpak._cpufeatures",
+            [
+                "src/cpufeatures.cpp",
+            ],
+            language="c++",
+            include_dirs=[
+                "src/cpufeature/cpufeature",
+            ],
+        ),
     ],
     cmdclass={"build_ext": CustomBuildExt},
 )
