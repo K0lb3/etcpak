@@ -6,9 +6,12 @@
 #include "cpu_x86_windows.c"
 #elif defined(__GNUC__) || defined(__clang__)
 #include "cpu_x86_linux.c"
+#elif
+#error "Unsupported compiler"
 #endif
 #endif
 
+#ifndef __ARM_NEON
 extern void cpuid(int32_t out[4], int32_t level, int32_t count);
 
 bool detect_OS_AVX(void)
@@ -40,13 +43,13 @@ bool detect_OS_AVX512(void)
     uint64_t xcrFeatureMask = xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 0xe6) == 0xe6;
 }
+#endif
 
-PyObject* check_cpufeatures(PyObject* self)
+PyObject *check_cpufeatures(PyObject *self)
 {
 #ifdef __ARM_NEON
     return Py_True;
-#endif
-
+#else
     int info[4]; // [EAX, EBX, ECX, EDX]
     cpuid(info, 0, 0);
     int nIds = info[0];
@@ -88,6 +91,7 @@ PyObject* check_cpufeatures(PyObject* self)
 #endif
 
     return Py_True;
+#endif
 }
 
 // Exported methods are collected in a table
