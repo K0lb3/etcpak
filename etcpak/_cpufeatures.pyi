@@ -1,3 +1,0 @@
-def check_cpufeatures() -> bool:
-    """Checks if the local CPU supports the SIMD instruction set required by the etcpak simd build."""
-    ...

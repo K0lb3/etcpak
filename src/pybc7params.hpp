@@ -3,6 +3,8 @@
 #include "structmember.h"
 #include "bc7enc.h"
 
+PyObject *PyBC7CompressBlockParamsObject = nullptr;
+
 typedef struct
 {
     PyObject_HEAD
@@ -11,19 +13,15 @@ typedef struct
 
 static void PyBC7CompressBlockParams_dealloc(PyBC7CompressBlockParams *self)
 {
-    Py_TYPE(self)->tp_free((PyObject *)self);
+    PyObject_Del(self);
 }
 
-static PyObject *PyBC7CompressBlockParams_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+static int PyBC7CompressBlockParams_init(PyBC7CompressBlockParams *self, PyObject *args, PyObject *kwds)
 {
-    PyBC7CompressBlockParams *self;
-    self = (PyBC7CompressBlockParams *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
-        memset(&self->params, 0, sizeof(bc7enc_compress_block_params));
-        bc7enc_compress_block_params_init(&self->params);
-    }
-    return (PyObject *)self;
+
+    memset(&self->params, 0, sizeof(bc7enc_compress_block_params));
+    bc7enc_compress_block_params_init(&self->params);
+    return 0;
 }
 
 // MEMBER DEFINITIONS.............................................
@@ -145,42 +143,21 @@ static PyMethodDef PyBC7CompressBlockParams_methods[] = {
 };
 
 // TYPE DEFINITION.............................................
-static PyTypeObject PyBC7CompressBlockParamsType = {
-    PyVarObject_HEAD_INIT(NULL, 0) "etcpak.BC7CompressBlockParams", /* tp_name */
-    sizeof(PyBC7CompressBlockParams),                               /* tp_basicsize */
-    0,                                                              /* tp_itemsize */
-    (destructor)PyBC7CompressBlockParams_dealloc,                   /* tp_dealloc */
-    0,                                                              /* tp_print */
-    0,                                                              /* tp_getattr */
-    0,                                                              /* tp_setattr */
-    0,                                                              /* tp_reserved */
-    0,                                                              /* tp_repr */
-    0,                                                              /* tp_as_number */
-    0,                                                              /* tp_as_sequence */
-    0,                                                              /* tp_as_mapping */
-    0,                                                              /* tp_hash */
-    0,                                                              /* tp_call */
-    0,                                                              /* tp_str */
-    0,                                                              /* tp_getattro */
-    0,                                                              /* tp_setattro */
-    0,                                                              /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,                       /* tp_flags */
-    "BC7 Compress Block Params",                                    /* tp_doc */
-    0,                                                              /* tp_traverse */
-    0,                                                              /* tp_clear */
-    0,                                                              /* tp_richcompare */
-    0,                                                              /* tp_weaklistoffset */
-    0,                                                              /* tp_iter */
-    0,                                                              /* tp_iternext */
-    PyBC7CompressBlockParams_methods,                               /* tp_methods */
-    PyBC7CompressBlockParams_members,                               /* tp_members */
-    PyBC7CompressBlockParams_getseters,                             /* tp_getset */
-    0,                                                              /* tp_base */
-    0,                                                              /* tp_dict */
-    0,                                                              /* tp_descr_get */
-    0,                                                              /* tp_descr_set */
-    0,                                                              /* tp_dictoffset */
-    0,                                                              /* tp_init */
-    0,                                                              /* tp_alloc */
-    PyBC7CompressBlockParams_new,                                   /* tp_new */
+static PyType_Slot PyBC7CompressBlockParams_slots[] = {
+    {Py_tp_dealloc, (void *)PyBC7CompressBlockParams_dealloc},
+    {Py_tp_doc, (void *)"BC7 Compress Block Params"},
+    {Py_tp_init, (void *)PyBC7CompressBlockParams_init},
+    {Py_tp_members, PyBC7CompressBlockParams_members},
+    {Py_tp_getset, PyBC7CompressBlockParams_getseters},
+    {Py_tp_methods, PyBC7CompressBlockParams_methods},
+    {Py_tp_new, (void *)PyType_GenericNew},
+    {0, NULL},
+};
+
+static PyType_Spec PyBC7CompressBlockParamsType_Spec = {
+    "etcpak.BC7CompressBlockParams",          // const char* name;
+    sizeof(PyBC7CompressBlockParams),         // int basicsize;
+    0,                                        // int itemsize;
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, // unsigned int flags;
+    PyBC7CompressBlockParams_slots            // PyType_Slot *slots;
 };

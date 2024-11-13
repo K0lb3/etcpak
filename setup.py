@@ -1,5 +1,12 @@
-from setuptools import setup, Extension
+from __future__ import annotations
+
+import os
+from typing import List
+
+from archspec.cpu import host
+from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
+from wheel.bdist_wheel import bdist_wheel
 
 ETCPAK_SOURCES = [
     "bc7enc.cpp",
@@ -21,121 +28,217 @@ ETCPAK_SOURCES = [
     "Timing.cpp",
 ]
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+ETCPAK_HEADERS = [
+    "b7enc.h",
+    "bcdec.h",
+    "Bitmap.hpp",
+    "BitmapDownsampled.hpp",
+    "BlockData.hpp",
+    "ColorSpace.hpp",
+    "DataProvider.hpp",
+    "Debug.hpp",
+    "Dither.hpp",
+    "Error.hpp",
+    "ForceInline.hpp",
+    "Math.hpp",
+    "MipMap.hpp",
+    "mmap.hpp",
+    "ProcessCommon.hpp",
+    "ProcessDxtc.hpp",
+    "ProcessRGB.hpp",
+    "Semaphore.hpp",
+    "System.hpp",
+    "Tables.hpp",
+    "TaskDispatch.hpp",
+    "Timing.hpp",
+    "Vector.hpp",
+    # lz4
+    "lz4/lz4.h",
+    # png
+    "libpng/png.h",
+    "libpng/pngconf.h",
+]
 
+class BuildConfig:
+    __SSE4_1__: bool = False
+    __AVX2__: bool = False
+    __AVX512BW__: bool = False
+    __AVX512VL__: bool = False
+    __AVX512F__: bool = False
+    __ARM_NEON: bool = False
+    msvc_flags: List[str] = []
+    unix_flags: List[str] = []
 
-def add_msvc_flags(ext: Extension, plat_name: str, enable_simd: bool):
-    ext.extra_compile_args.extend(
-        [
-            "/std:c++20",
-            "/Zc:strictStrings-",
-            "/DNOMINMAX",
-            "/GL",
-        ]
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+    
+    def items(self):
+        return self.__dict__.items()
+
+configs = {
+    "sse41": BuildConfig(
+        __SSE4_1__=True,
+        msvc_flags=["/arch:SSE4.1"],
+        unix_flags=["-msse4.1"]
+    ),
+    "avx2": BuildConfig(
+        __SSE4_1__=True,
+        __AVX2__=True,
+        msvc_flags=["/arch:AVX2"],
+        unix_flags=["-msse4.1", "-mfma", "-mbmi", "-mavx2"]
+    ),
+    "avx512": BuildConfig(
+        __SSE4_1__=True,
+        __AVX2__=True,
+        __AVX512BW__=True,
+        __AVX512VL__=True,
+        msvc_flags=["/arch:AVX512"],
+        unix_flags=["-msse4.1", "-mfma", "-mbmi", "-mavx2", "-mavx512vl", "-mavx512bw", "-mavx512dq", "-mavx512f"]
+    ),
+    "neon": BuildConfig(
+        __ARM_NEON=True,
     )
-    ext.extra_link_args = ["/LTCG:incremental"]
-    if enable_simd and "-amd64" in plat_name:
-        ext.extra_compile_args.extend(["/D__SSE4_1__", "/D__AVX2__", "/arch:AVX2"])
-
-
-def add_gcc_flags(ext: Extension, plat_name: str, enable_simd: bool):
-    ext.extra_compile_args.append("-std=c++20")
-    ext.extra_link_args = ["-flto"]
-    if enable_simd:
-        if "-arm" in plat_name or "-aarch64" in plat_name:
-            if "macosx" in plat_name:
-                native_arg = "-mcpu=apple-m1"
-            else:
-                native_arg = "-mcpu=native"
-        else:
-            native_arg = "-march=native"
-        ext.extra_compile_args.append(native_arg)
+}
 
 
 class CustomBuildExt(build_ext):
     def build_extensions(self):
-        compiler_type = self.compiler.compiler_type
+        extra_compile_args: List[str] = []
+        extra_link_args: List[str] = []
+
+        # check for cibuildwheel
+        cibuildwheel = os.environ.get("CIBUILDWHEEL", False)
+
+        msvc: bool = False
+        if self.compiler.compiler_type == "msvc":
+            extra_compile_args = [
+                "/std:c++20",
+                "/Zc:strictStrings-",
+                "/DNOMINMAX",
+                "/GL",
+            ]
+            extra_link_args = ["/LTCG:incremental"]
+            msvc = True
+        else:
+            extra_compile_args = [
+                "-std=c++20",
+                "-flto",
+            ]
+            extra_link_args = ["-flto"]
+
+            if not cibuildwheel:
+                # do some native optimizations for the current machine
+                # can't be used for generic builds
+                if "-arm" in self.plat_name or "-aarch64" in self.plat_name:
+                    native_arg = "-mcpu=native"
+                else:
+                    native_arg = "-march=native"
+                extra_compile_args.append(native_arg)
+
+        local_host = host()
+
+        if self.plat_name.endswith(("amd64", "x86_64")):
+            if cibuildwheel:
+                self.extensions.extend(
+                    [
+                        ETCPAKExtension("none", BuildConfig()),
+                        ETCPAKExtension("sse41", configs["sse41"]),
+                        ETCPAKExtension("avx2", configs["avx2"]),
+                        ETCPAKExtension("avx512", configs["avx512"]),
+                    ]
+                )
+            elif "avx512bw" in local_host.features and "avx512vl" in local_host.features:
+                self.extensions.append(ETCPAKExtension("avx512", configs["avx512"]))
+            elif "avx2" in local_host.features:
+                self.extensions.append(ETCPAKExtension("avx2", configs["avx2"]))
+            elif "sse4_1" in local_host.features:
+                self.extensions.append(ETCPAKExtension("sse41", configs["sse41"]))
+
+        elif self.plat_name.endswith(("arm64", "aarch64")):
+            # TODO: somehow detect neon, sve128, sve256
+            # atm assume neon is always available
+            self.extensions.append(ETCPAKExtension("neon", configs["neon"]))
+        elif self.plat_name.endswith("armv7l"):
+            # TODO: detect neon
+            pass
+
         for ext in self.extensions:
-            enable_simd = ext.name != "etcpak._etcpak"
-            if compiler_type == "msvc":
-                add_msvc_flags(ext, self.plat_name, enable_simd)
+            ext: ETCPAKExtension
+            ext.extra_compile_args.extend(extra_compile_args)
+            ext.extra_link_args.extend(extra_link_args)
+
+            build_config = ext.build_config
+            if msvc:
+                ext.extra_compile_args.extend(build_config.msvc_flags)
             else:
-                add_gcc_flags(ext, self.plat_name, enable_simd)
+                ext.extra_compile_args.extend(build_config.unix_flags)
+            
+            for key, value in build_config.items():
+                if key.startswith("__"):
+                    if value:
+                        ext.define_macros.append((key, None))
+                    else:
+                        ext.undef_macros.append(key)
 
         super().build_extensions()
 
 
-def create_etcpak_extension(enable_simd: bool):
-    module_name = "_etcpak"
-    if enable_simd:
-        module_name += "_simd"
 
-    return Extension(
-        f"etcpak.{module_name}",
-        [
+class ETCPAKExtension(Extension):
+    build_config: BuildConfig
+    _needs_stub: bool = False
+
+    def __init__(self, name: str, build_config: BuildConfig):
+        module_name = f"_etcpak_{name}"
+        super().__init__(
+            f"etcpak.{module_name}",
+            sources=[
             "src/pylink.cpp",
             "src/dummy.cpp",
             *[f"src/etcpak/{src}" for src in ETCPAK_SOURCES],
-        ],
-        language="c++",
-        include_dirs=[
-            "src/etcpak",
-        ],
-        extra_compile_args=[
-            "-DNDEBUG",
-            "-DNO_GZIP",
-            # Mac fix due to .c problem
-            "-DBCDEC_IMPLEMENTATION=1",
-            f'-DMODULE_NAME="{module_name}"',
-            f"-DINIT_FUNC_NAME=PyInit_{module_name}",
-        ],
-    )
+            ],
+            depends=[
+                "src/pybc7params.hpp",
+                *[
+                    f"src/etcpak/{header}"
+                    for header in ETCPAK_HEADERS
+                ],
+            ],
+            include_dirs=["src/etcpak"],
+            language="c++",
+            extra_compile_args=[
+                "-DNDEBUG",
+                "-DNO_GZIP",
+            ],
+            define_macros=[
+                ("Py_LIMITED_API", "0x03070000"),
+                ("MODULE_NAME", '"module_name"'),
+                ("INIT_FUNC_NAME", f"PyInit_{module_name}"),
+                # Mac fix due to .c problem
+                ("BCDEC_IMPLEMENTATION", "1"),
+            ],
+            py_limited_api=True,
+        )
 
+        self.build_config = build_config
+
+
+
+class bdist_wheel_abi3(bdist_wheel):
+    def get_tag(self):
+        python, abi, plat = super().get_tag()
+
+        if python.startswith("cp"):
+            # on CPython, our wheels are abi3 and compatible back to 3.6
+            return "cp37", "abi3", plat
+
+        return python, abi, plat
 
 setup(
     name="etcpak",
-    description="python wrapper for etcpak",
-    author="K0lb3",
-    version="0.9.12",
     packages=["etcpak"],
-    package_data={
-        "etcpak": ["__init__.py", "__init__.pyi", "py.typed", "_cpufeatures.pyi"]
-    },
-    keywords=["etc", "dxt", "texture", "python-c"],
-    classifiers=[
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-        "Intended Audience :: Developers",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
-        "Topic :: Multimedia :: Graphics",
-    ],
-    url="https://github.com/K0lb3/etcpak",
-    download_url="https://github.com/K0lb3/etcpak/tarball/master",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    ext_modules=[
-        create_etcpak_extension(False),
-        create_etcpak_extension(True),
-        Extension(
-            "etcpak._cpufeatures",
-            [
-                "src/cpufeatures.cpp",
-            ],
-            language="c++",
-            include_dirs=[
-                "src/cpufeature/cpufeature",
-            ],
-        ),
-    ],
-    cmdclass={"build_ext": CustomBuildExt},
+    package_data={"etcpak": ["*.py", "*.pyi", "py.typed"]},
+    ext_modules=[ETCPAKExtension("none", BuildConfig())],
+    cmdclass={"build_ext": CustomBuildExt, "bdist_wheel": bdist_wheel_abi3},
 )

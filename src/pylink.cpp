@@ -98,7 +98,7 @@ static PyObject *compress_bc7(PyObject *self, PyObject *args)
     }
     else
     {
-        if (!PyObject_IsInstance(params, (PyObject *)&PyBC7CompressBlockParamsType))
+        if (!PyObject_IsInstance(params, PyBC7CompressBlockParamsObject))
         {
             PyErr_SetString(PyExc_ValueError, "params must be an instance of BC7CompressBlockParams");
             free(buf);
@@ -273,12 +273,12 @@ static PyModuleDef etcpak_module = {
     NULL  // Optional module deallocation function
 };
 
-static void add_type(PyObject *m, PyTypeObject *obj, const char *name)
+static void add_type(PyObject *m, PyObject *obj, const char *name)
 {
-    if (PyType_Ready(obj) < 0)
+    if (PyType_Ready((PyTypeObject *)obj) < 0)
         return;
     Py_INCREF(obj);
-    PyModule_AddObject(m, name, (PyObject *)obj);
+    PyModule_AddObject(m, name, obj);
 }
 
 // The module init function
@@ -287,6 +287,8 @@ PyMODINIT_FUNC INIT_FUNC_NAME(void)
     PyObject *m = PyModule_Create(&etcpak_module);
     if (m == NULL)
         return NULL;
-    add_type(m, &PyBC7CompressBlockParamsType, "BC7CompressBlockParams");
+
+    PyBC7CompressBlockParamsObject = PyType_FromSpec(&PyBC7CompressBlockParamsType_Spec);
+    add_type(m, PyBC7CompressBlockParamsObject, "BC7CompressBlockParams");
     return m;
 }

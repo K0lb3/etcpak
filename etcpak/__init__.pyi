@@ -3,34 +3,51 @@ from typing import Optional
 class BC7CompressBlockParams:
     """BC7 compression block parameters.
 
-    Attributes:
-        m_mode_mask (int): The mode mask.
-        m_max_partitions (int): The maximum partitions.
+    Attributes
+    ----------
+        m_mode_mask: int
+            The mode mask.
+        m_max_partitions: int
+            The maximum partitions.
             m_max_partitions may range from 0 (disables mode 1) to BC7ENC_MAX_PARTITIONS (64).
             The higher this value, the slower the compressor, but the higher the quality.
-        m_weights (list[int]): The weights.
+        m_weights: List[int]
+            The weights.
             Relative RGBA or YCbCrA weights.
-        m_uber_level (int): The uber level.
+        m_uber_level: int
+            The uber level.
             m_uber_level may range from 0 to BC7ENC_MAX_UBER_LEVEL (4).
             The higher this value, the slower the compressor, but the higher the quality.
-        m_perceptual (bool): Perceptual.
+        m_perceptual: bool
+            Perceptual.
             If m_perceptual is true, colorspace error is computed in YCbCr space, otherwise RGB.
-        m_try_least_squares (bool): Try least squares.
+        m_try_least_squares: bool
+            Try least squares.
             Set m_try_least_squares to false for slightly faster/lower quality compression.
-        m_mode17_partition_estimation_filterbank (bool): Mode 17 partition estimation filterbank.
+        m_mode17_partition_estimation_filterbank: bool
+            Mode 17 partition estimation filterbank.
             When m_mode17_partition_estimation_filterbank,
             the mode1 partition estimator skips lesser used partition patterns unless they are strongly predicted to be potentially useful.
             There's a slight loss in quality with this enabled (around .08 dB RGB PSNR or .05 dB Y PSNR),
             but up to a 11% gain in speed depending on the other settings.
-        m_force_selectors (bool): Force selectors.
-        m_force_alpha (bool): Force alpha.
-        m_quant_mode6_endpoints (bool): Quant mode 6 endpoints.
-        m_bias_mode1_pbits (bool): Bias mode 1 pbits.
-        m_pbit1_weigh (float): Pbit 1 weigh.
-        m_mode1_error_weight (float): Mode 1 error weight.
-        m_mode5_error_weight (float): Mode 5 error weight.
-        m_mode6_error_weight (float): Mode 6 error weight.
-        m_mode7_error_weight (float): Mode 7 error weight.
+        m_force_selectors: bool
+            Force selectors.
+        m_force_alpha: bool
+            Force alpha.
+        m_quant_mode6_endpoints: bool
+            Quant mode 6 endpoints.
+        m_bias_mode1_pbits: bool
+            Bias mode 1 pbits.
+        m_pbit1_weight: float
+            Pbit 1 weight.
+        m_mode1_error_weight: float
+            Mode 1 error weight.
+        m_mode5_error_weight: float
+            Mode 5 error weight.
+        m_mode6_error_weight: float
+            Mode 6 error weight.
+        m_mode7_error_weight: float
+            Mode 7 error weight.
     """
 
     m_mode_mask: int = 2**32 - 1
