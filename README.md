@@ -3,7 +3,8 @@
 [![PyPI supported Python versions](https://img.shields.io/pypi/pyversions/etcpak.svg)](https://pypi.python.org/pypi/etcpak)
 [![Win/Mac/Linux](https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-informational)]()
 [![MIT](https://img.shields.io/pypi/l/etcpak.svg)](https://github.com/K0lb3/etcpak/blob/master/LICENSE)
-[![Build Status](https://github.com/K0lb3/etcpak/actions/workflows/python-package.yml/badge.svg)](https://github.com/K0lb3/etcpak/actions?query=workflow Build & Publish wheels)
+[![Test](https://github.com/K0lb3/etcpak/actions/workflows/test.yml/badge.svg)](https://github.com/K0lb3/etcpak/actions/workflows/test.yml)
+[![Build & Publish wheels](https://github.com/K0lb3/etcpak/actions/workflows/release.yml/badge.svg)](https://github.com/K0lb3/etcpak/actions/workflows/release.yml)
 
 A python wrapper for [wolfpld/etcpak](https://github.com/wolfpld/etcpak)
 All relevant function  and class documentation was taken from [wolfpld/etcpak](https://github.com/wolfpld/etcpak).
