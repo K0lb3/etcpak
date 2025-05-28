@@ -58,6 +58,7 @@ __all__ = (
     "compress_bc1",
     "compress_bc1_dither",
     "compress_bc3",
+    "compress_bc4",
     "compress_bc5",
     "compress_bc7",
     "compress_etc1_rgb",
