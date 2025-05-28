@@ -11,11 +11,8 @@ from wheel.bdist_wheel import bdist_wheel
 ETCPAK_SOURCES = [
     "bc7enc.cpp",
     # "bcdec.c", mac issue, fixed by moving define to compiler define arg
-    "Bitmap.cpp",
-    # "BitmapDownsampled.cpp",
-    "BlockData.cpp",
+    "Decode.cpp",
     "ColorSpace.cpp",
-    # "DataProvider.cpp",
     "Debug.cpp",
     "Dither.cpp",
     "Error.cpp",
@@ -31,9 +28,7 @@ ETCPAK_SOURCES = [
 ETCPAK_HEADERS = [
     "b7enc.h",
     "bcdec.h",
-    "Bitmap.hpp",
-    "BitmapDownsampled.hpp",
-    "BlockData.hpp",
+    "Decode.hpp",
     "ColorSpace.hpp",
     "DataProvider.hpp",
     "Debug.hpp",
@@ -52,11 +47,6 @@ ETCPAK_HEADERS = [
     "TaskDispatch.hpp",
     "Timing.hpp",
     "Vector.hpp",
-    # lz4
-    "lz4/lz4.h",
-    # png
-    "libpng/png.h",
-    "libpng/pngconf.h",
 ]
 
 class BuildConfig:
@@ -195,7 +185,6 @@ class ETCPAKExtension(Extension):
             f"etcpak.{module_name}",
             sources=[
             "src/pylink.cpp",
-            "src/dummy.cpp",
             *[f"src/etcpak/{src}" for src in ETCPAK_SOURCES],
             ],
             depends=[

@@ -5,7 +5,7 @@
 /*
  *************************************************
  *
- * general decoder function headers
+ * compression
  *
  ************************************************
  */
@@ -113,13 +113,16 @@ static PyObject *compress_bc7(PyObject *self, PyObject *args)
     return res;
 }
 
-// stupid hack to access protected members
-#define _ALLOW_KEYWORD_MACROS
-#define protected public
-#define private public
-#include "BlockData.hpp"
+/*
+ *************************************************
+ *
+ * decompression
+ *
+ ************************************************
+ */
+#include "Decode.hpp"
 
-template <BlockData::Type blockDataType>
+template <void (*DecompressFunc)(const uint64_t *src, uint32_t *dst, int32_t width, int32_t height)>
 static PyObject *decompress(PyObject *self, PyObject *args)
 {
     const uint32_t *data;
@@ -135,26 +138,20 @@ static PyObject *decompress(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    v2i size(width, height);
-    BlockData blockData(size, false, blockDataType);
-    memcpy(
-        blockData.m_data + blockData.m_dataOffset,
-        data,
-        data_size);
+    PyObject *res = PyBytes_FromStringAndSize(NULL, width * height * 4);
+    if (res == NULL)
+        return PyErr_NoMemory();
+    uint32_t *decodedData = (uint32_t *)PyByteArray_AsString(res);
+    if (decodedData == NULL)
+    {
+        Py_DECREF(res);
+        return PyErr_NoMemory();
+    }
 
-    BitmapPtr decodedBitmap = blockData.Decode();
-
-    PyObject *res = Py_BuildValue(
-        "y#",
-        decodedBitmap->m_data,
-        decodedBitmap->m_size.x * decodedBitmap->m_size.y * 4);
+    DecompressFunc((const uint64_t *)data, decodedData, width, height);
 
     return res;
 }
-#undef protected
-#undef private
-#undef _ALLOW_KEYWORD_MACROS
-//
 
 /*
  *************************************************
@@ -215,43 +212,43 @@ static struct PyMethodDef method_table[] = {
      METH_VARARGS,
      ""},
     {"decompress_etc1_rgb",
-     (PyCFunction)decompress<BlockData::Etc1>,
+     (PyCFunction)decompress<DecodeRGB>,
      METH_VARARGS,
      ""},
     {"decompress_etc2_rgb",
-     (PyCFunction)decompress<BlockData::Etc2_RGB>,
+     (PyCFunction)decompress<DecodeRGB>,
      METH_VARARGS,
      ""},
     {"decompress_etc2_rgba",
-     (PyCFunction)decompress<BlockData::Etc2_RGBA>,
+     (PyCFunction)decompress<DecodeRGBA>,
      METH_VARARGS,
      ""},
     {"decompress_etc2_r11",
-     (PyCFunction)decompress<BlockData::Etc2_R11>,
+     (PyCFunction)decompress<DecodeR>,
      METH_VARARGS,
      ""},
     {"decompress_etc2_rg11",
-     (PyCFunction)decompress<BlockData::Etc2_RG11>,
+     (PyCFunction)decompress<DecodeRG>,
      METH_VARARGS,
      ""},
     {"decompress_bc1",
-     (PyCFunction)decompress<BlockData::Bc1>,
+     (PyCFunction)decompress<DecodeBc1>,
      METH_VARARGS,
      ""},
     {"decompress_bc3",
-     (PyCFunction)decompress<BlockData::Bc3>,
+     (PyCFunction)decompress<DecodeBc3>,
      METH_VARARGS,
      ""},
     {"decompress_bc4",
-     (PyCFunction)decompress<BlockData::Bc4>,
+     (PyCFunction)decompress<DecodeBc4>,
      METH_VARARGS,
      ""},
     {"decompress_bc5",
-     (PyCFunction)decompress<BlockData::Bc5>,
+     (PyCFunction)decompress<DecodeBc5>,
      METH_VARARGS,
      ""},
     {"decompress_bc7",
-     (PyCFunction)decompress<BlockData::Bc7>,
+     (PyCFunction)decompress<DecodeBc7>,
      METH_VARARGS,
      ""},
     {NULL,
