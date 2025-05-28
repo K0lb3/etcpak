@@ -2,7 +2,7 @@ from archspec.cpu import host
 
 local_host = host()
 
-__version__ = "0.9.13"
+__version__ = "0.9.14"
 
 try:
     # pypi wheels won't have these for now
