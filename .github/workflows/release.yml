@@ -24,9 +24,11 @@ jobs:
       - name: Install sdist
         run: pip install dist/*.tar.gz
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: "sdist"
           path: dist/*.tar.gz
+          retention-days: 1
   
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -47,9 +49,11 @@ jobs:
         env:
           CIBW_TEST_SKIP: "*"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: "${{ matrix.os }}"
           path: ./wheelhouse/*.whl
+          retention-days: 1
   
   build_wheels_ubuntu_manylinux:
     name: Build x86 manylinux wheels on ubuntu-latest
@@ -68,9 +72,11 @@ jobs:
           CIBW_SKIP: "*aarch64 *ppc64le *s390x *armv7l *-musllinux*"
           CIBW_TEST_SKIP: "*"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: "wheels_manylinux"
           path: ./wheelhouse/*.whl
+          retention-days: 1
 
   build_wheels_ubuntu_musllinux:
     name: Build x86 musllinux wheels on ubuntu-latest
@@ -88,9 +94,11 @@ jobs:
           CIBW_SKIP: "*aarch64 *ppc64le *s390x *armv7l *-manylinux*"
           CIBW_TEST_SKIP: "*"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: "wheels_musllinux"
           path: ./wheelhouse/*.whl
+          retention-days: 1
 
   build_wheels_qemu:
     name: Build wheels qemu on ubuntu-latest
@@ -113,9 +121,11 @@ jobs:
           CIBW_SKIP: "*x86_64 *i686"
           CIBW_TEST_SKIP: "*"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: "wheels_qemu"
           path: ./wheelhouse/*.whl
+          retention-days: 1
 
 
   upload_pypi:
@@ -126,10 +136,10 @@ jobs:
     permissions:
         id-token: write
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifact
           path: dist
+          merge-multiple: true
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
