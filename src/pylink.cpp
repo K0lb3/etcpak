@@ -90,7 +90,7 @@ static PyObject *compress_bc7(PyObject *self, PyObject *args)
 
     // compress
     bc7enc_compress_block_init();
-    if (params == nullptr)
+    if (params == Py_None || params == nullptr)
     {
         bc7enc_compress_block_params bc7params;
         bc7enc_compress_block_params_init(&bc7params);
