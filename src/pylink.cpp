@@ -90,11 +90,10 @@ static PyObject *compress_bc7(PyObject *self, PyObject *args)
 
     // compress
     bc7enc_compress_block_init();
+    bc7enc_compress_block_params bc7params;
     if (params == Py_None || params == nullptr)
     {
-        bc7enc_compress_block_params bc7params;
         bc7enc_compress_block_params_init(&bc7params);
-        CompressBc7(data, buf, width * height / 16, width, &bc7params);
     }
     else
     {
@@ -105,8 +104,13 @@ static PyObject *compress_bc7(PyObject *self, PyObject *args)
             assert(PyErr_Occurred());
             return NULL;
         }
-        CompressBc7(data, buf, width * height / 16, width, &((PyBC7CompressBlockParams *)params)->params);
+        bc7params = ((PyBC7CompressBlockParams *)params)->params;
     }
+
+    Py_BEGIN_ALLOW_THREADS
+    CompressBc7(data, buf, width * height / 16, width, &bc7params);
+    Py_END_ALLOW_THREADS
+
     // return
     PyObject *res = Py_BuildValue("y#", buf, buf_size);
     free(buf);
